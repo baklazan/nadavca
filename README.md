@@ -36,6 +36,8 @@ If Nadavca crashes for any other reason, please report that, too.
 
 ### Calling SNPs
 
+Warning: does not support multiple contigs
+
 ```python
 nadavca.estimate_snps(reference_filename,
                       reads,
@@ -55,9 +57,6 @@ where:
    -  a name of a directory. In that case, all `.fast5` files in the directory will
       be processed
    -  a list of `nadavca.Read` instances
-*  If reference sequence has already been loaded into a `nadavca.Genome` instance,
-   you can pass it as `reference` argument to prevent Nadavca from unnecessarily
-   reloading it. You still need to specify `reference_filename`
 *  `config` is either of:
    - a name of a YAML file containing parameters for the SNP-calling algorithm 
      (see [default values](default/config.yaml))
@@ -113,7 +112,6 @@ for more details.
 ```
 nadavca.align_signal(reference_filename,
                      reads,
-                     reference=None,
                      config='default/config.yaml',
                      kmer_model='default/kmer_model.hdf5',
                      bwa_executable='bwa',
@@ -122,12 +120,12 @@ nadavca.align_signal(reference_filename,
 
 where parameters have the same meaning as in `nadavca.estimate_snps()`.
 
-The return value of `nadavca.align_signal()` is a list of 2D `numpy` arrays.
-Each array in the list corresponds to one read, in the same
-order as they appeared on the input. Thus, it is advisable to pass reads to
-`nadavca.align_signal()` as a list. 
+The return value of `nadavca.align_signal()` is a list of results for each read,
+in the same order as they appeared on the input. Thus, it is advisable to pass reads to `nadavca.align_signal()` as a list. 
 
-Each array has two columns: the first
+If read was not aligned the result is None. Otherwise each results is a tuple
+of ApproximateAlignment and DTW alignment. 
+DTW alignment is an array with two columns: the first
 column contains positions in the signal, the second column contains 
 corresponding positions in the reference sequence. Positions in signal are 
 in ascending order. Positions in reference are in ascending or descending
