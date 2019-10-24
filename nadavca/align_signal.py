@@ -11,7 +11,6 @@ import yaml
 
 def align_signal(reference_filename,
                  reads,
-                 reference=None,
                  config=nadavca.defaults.CONFIG_FILE,
                  kmer_model=nadavca.defaults.KMER_MODEL_FILE,
                  bwa_executable=nadavca.defaults.BWA_EXECUTABLE,
@@ -32,15 +31,16 @@ def align_signal(reference_filename,
                 'failed to load k-mer model: {} not found\n'.format(kmer_model))
             return None
 
-    if reference is None:
-        try:
-            reference = Genome.load_from_fasta(reference_filename)[0].bases
-        except FileNotFoundError:
-            sys.stderr.write(
-                "failed to process: reference {} doesn't exist\n".format(reference_filename))
-            return None
+    try:
+        references = Genome.load_from_fasta(reference_filename)
+        references_dict = {r.description[1:]: r.bases for r in references}
+    except FileNotFoundError:
+        sys.stderr.write(
+            "failed to process: reference {} doesn't exist\n".format(reference_filename))
+        return None
 
-    approximate_aligner = ApproximateAligner(bwa_executable, reference, reference_filename)
+    approximate_aligner = ApproximateAligner(bwa_executable, None, reference_filename,
+    references_dict)
     estimator = ProbabilityEstimator(kmer_model, approximate_aligner, config)
 
     if isinstance(reads, str):
@@ -58,7 +58,7 @@ def align_signal(reference_filename,
 
     Read.normalize_reads(reads)
 
-    return [estimator.get_refined_alignment(reference, read) for read in reads]
+    return [estimator.get_refined_alignment(read) for read in reads]
 
 def align_signal_command(args):
     try:
@@ -96,8 +96,8 @@ def align_signal_command(args):
             output_file = open(os.path.join(args.output, basename + '.txt'), 'w')
         else:
             output_file = sys.stdout
-        output_file.write("signal_position\treference_position\n")
+        output_file.write("reference_position\tevent_start\tevent_end\n")
         for line in alignment:
-            output_file.write("{}\t{}\n".format(line[0], line[1]))
+            output_file.write("{}\n".format('\t'.join(line)))
         if args.output:
             output_file.close()
